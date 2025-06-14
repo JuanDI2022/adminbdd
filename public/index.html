@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login y Ejecución PL/SQL | Moderno</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --color-primario: #007bff;
+            --color-primario-hover: #0056b3;
+            --color-fondo: #f4f7f6;
+            --color-tarjeta: #ffffff;
+            --color-texto: #333333;
+            --color-texto-secundario: #555555;
+            --color-borde: #dddddd;
+            --color-sombra: rgba(0, 0, 0, 0.1);
+            --color-exito: #28a745;
+            --color-error: #dc3545;
+            --radio-borde: 8px;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
+            color: var(--color-texto);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .card {
+            background-color: var(--color-tarjeta);
+            border-radius: var(--radio-borde);
+            padding: 40px;
+            box-shadow: 0 10px 25px var(--color-sombra);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: var(--color-texto);
+            margin-bottom: 30px;
+        }
+        
+        h3 {
+            margin-top: 30px;
+            border-bottom: 1px solid var(--color-borde);
+            padding-bottom: 10px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--color-texto-secundario);
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--color-borde);
+            border-radius: var(--radio-borde);
+            background-color: var(--color-fondo);
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--color-primario);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--color-primario);
+            color: white;
+            border: none;
+            border-radius: var(--radio-borde);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        button:hover {
+            background-color: var(--color-primario-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-logout {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: transparent;
+            border: 1px solid var(--color-borde);
+            color: var(--color-texto-secundario);
+            height: 40px;
+            width: 40px;
+            padding: 0;
+            margin: 0;
+            border-radius: 50%;
+        }
+        .btn-logout:hover {
+            background-color: var(--color-fondo);
+            border-color: var(--color-error);
+            color: var(--color-error);
+            transform: translateY(0) scale(1.1);
+        }
+
+        #mensajes {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: var(--radio-borde);
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+        #mensajes.success {
+            background-color: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        #mensajes.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        #resultado { 
+            white-space: pre-wrap;
+            background-color: #2d333b;
+            color: #cdd9e5;
+            border: 1px solid #444c56;
+            padding: 15px; 
+            margin-top: 20px;
+            border-radius: var(--radio-borde);
+            font-family: 'Courier New', Courier, monospace;
+            min-height: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="loginCard" class="card">
+            <h1>Bienvenido</h1>
+            <div id="mensajes"></div>
+            <form id="loginForm">
+                <label for="usuario">Usuario</label>
+                <input type="text" id="usuario" name="usuario" required autocomplete="username">
+                <br><br>
+                <label for="contraseña">Contraseña</label>
+                <input type="password" id="contraseña" name="contraseña" required autocomplete="current-password">
+                <button type="submit">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    <span>Iniciar sesión</span>
+                </button>
+            </form>
+        </div>
+
+        <div id="contenidoAutenticado" class="card" style="display:none;">
+            <button id="logoutButton" class="btn-logout" title="Cerrar Sesión">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </button>
+            
+            <h2>Ejecución PL/SQL</h2>
+            <form id="plsqlForm">
+                <label for="codigo">Selecciona un script</label>
+                <select name="codigo" id="codigo" required>
+                    <option value="1">Tipos de datos</option>
+                    <option value="2">Cálculos con fechas</option>
+                    <option value="3">Contar empleados y ver usuario</option>
+                    <option value="4">Info de BD y fecha de creación</option>
+                    <optgroup label="Scripts de Administración y Datos">
+                        <option value="5">Verificar Antigüedad de la BD (>30 días)</option>
+                        <option value="6">Clasificar # de Objetos</option>
+                        <option value="7">Contar Total de Objetos de la BD</option>
+                        <option value="10">Crear Tabla TBL_NUM (Solo 1 vez)</option>
+                        <option value="9">Insertar Lote en TBL_NUM (Con Incremento)</option>
+                    </optgroup>
+                     <optgroup label="Scripts de Lógica y Bucles">
+                        <option value="8">Bucle Simple (Loop de 1 a 10)</option>
+                        <option value="11">Generar Números Pares (1 a 10)</option>
+                        <option value="12">Generar Números Impares (1 a 10)</option>
+                    </optgroup>
+                </select>
+
+                <div id="parametrosAdicionales" style="display:none; margin-top: 15px;">
+                    <label for="incremento">Incremento (de 1 en 1, 2 en 2, etc.)</label>
+                    <input type="number" id="incremento" name="incremento" value="1" min="1">
+                </div>
+                
+                <button type="submit">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    <span>Ejecutar código</span>
+                </button>
+            </form>
+
+            <h3>Resultado de la Ejecución</h3>
+            <div id="resultado"></div>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const plsqlForm = document.getElementById('plsqlForm');
+        const loginCard = document.getElementById('loginCard');
+        const contenidoAutenticado = document.getElementById('contenidoAutenticado');
+        const resultadoDiv = document.getElementById('resultado');
+        const mensajesDiv = document.getElementById('mensajes');
+        const logoutButton = document.getElementById('logoutButton');
+        const codigoSelect = document.getElementById('codigo');
+        const parametrosDiv = document.getElementById('parametrosAdicionales');
+
+        codigoSelect.addEventListener('change', () => {
+            if (codigoSelect.value === '9') {
+                parametrosDiv.style.display = 'block';
+            } else {
+                parametrosDiv.style.display = 'none';
+            }
+        });
+
+        logoutButton.addEventListener('click', async () => {
+            const response = await fetch('/logout', { method: 'POST' });
+            const result = await response.json();
+
+            if (result.success) {
+                contenidoAutenticado.style.display = 'none';
+                loginCard.style.display = 'block';
+                loginForm.reset();
+                resultadoDiv.textContent = '';
+                parametrosDiv.style.display = 'none';
+                mostrarMensaje('Sesión cerrada.', false);
+            }
+        });
+
+        function mostrarMensaje(mensaje, esError = false) {
+            mensajesDiv.textContent = mensaje;
+            mensajesDiv.className = esError ? 'error' : 'success';
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(loginForm);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    loginCard.style.display = 'none';
+                    contenidoAutenticado.style.display = 'block';
+                    mensajesDiv.style.display = 'none';
+                } else {
+                    mostrarMensaje(result.message, true);
+                }
+            } catch (error) {
+                mostrarMensaje('Error de red al intentar iniciar sesión.', true);
+            }
+        });
+
+        plsqlForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(plsqlForm);
+            const data = Object.fromEntries(formData.entries());
+            resultadoDiv.textContent = 'Ejecutando...';
+
+            try {
+                const response = await fetch('/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    resultadoDiv.textContent = result.result;
+                } else {
+                    resultadoDiv.textContent = `Error: ${result.message}`;
+                }
+            } catch (error) {
+                resultadoDiv.textContent = `Error de red al ejecutar el código.`;
+            }
+        });
+    </script>
+</body>
+</html>
