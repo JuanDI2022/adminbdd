@@ -290,11 +290,6 @@ BEGIN
     RAISE NOTICE '--- ANÁLISIS DE OBJETOS DE LA BASE DE DATOS ---';
     RAISE NOTICE 'Total de objetos encontrados: %', v_total_objetos;
     RAISE NOTICE ''; -- Línea en blanco para separar
-    RAISE NOTICE 'Desglose principal:';
-    RAISE NOTICE ' -> % Tablas (Datos principales)', v_total_tablas;
-    RAISE NOTICE ' -> % Índices (Aceleran las búsquedas)', v_total_indices;
-    RAISE NOTICE ''; -- Línea en blanco para separar
-
     -- Lógica de comparación con 250
     IF v_total_objetos > 250 THEN
         RAISE NOTICE '>> La base de datos tiene MÁS de 250 objetos.';
