@@ -271,33 +271,48 @@ BEGIN
     END IF;
 END $$;
 `,
-        "6": `
+         "6": `
 DO $$
 DECLARE
-    v_total INTEGER;
+    v_total_objetos  INTEGER;
+    v_total_tablas   INTEGER;
+    v_total_indices  INTEGER;
 BEGIN
-    -- Contamos desde pg_class para obtener un número más completo de objetos (tablas, índices, secuencias, etc.)
-    SELECT count(*) INTO v_total FROM pg_catalog.pg_class;
-    RAISE NOTICE 'Número total de objetos en la BD (tablas, índices, secuencias, etc.): %', v_total;
-    CASE
-        WHEN v_total < 1000 THEN
-            RAISE NOTICE '>> La base de datos tiene una cantidad de objetos estándar.';
-        WHEN v_total < 5000 THEN
-            RAISE NOTICE '>> La base de datos tiene una cantidad considerable de objetos.';
-        ELSE
-            RAISE NOTICE '>> La base de datos es grande y contiene muchos objetos.';
-    END CASE;
+    -- Conteo total de objetos (incluye tablas, índices, secuencias, vistas, etc.)
+    SELECT count(*) INTO v_total_objetos FROM pg_catalog.pg_class;
+
+    -- Conteo específico de tablas (relkind = 'r' para 'relation')
+    SELECT count(*) INTO v_total_tablas FROM pg_catalog.pg_class WHERE relkind = 'r';
+
+    -- Conteo específico de índices (relkind = 'i' para 'index')
+    SELECT count(*) INTO v_total_indices FROM pg_catalog.pg_class WHERE relkind = 'i';
+
+    RAISE NOTICE '--- ANÁLISIS DE OBJETOS DE LA BASE DE DATOS ---';
+    RAISE NOTICE 'Total de objetos encontrados: %', v_total_objetos;
+    RAISE NOTICE ''; -- Línea en blanco para separar
+    RAISE NOTICE 'Desglose principal:';
+    RAISE NOTICE ' -> % Tablas (Datos principales)', v_total_tablas;
+    RAISE NOTICE ' -> % Índices (Aceleran las búsquedas)', v_total_indices;
+    RAISE NOTICE ''; -- Línea en blanco para separar
+
+    -- Lógica de comparación con 250
+    IF v_total_objetos > 250 THEN
+        RAISE NOTICE '>> La base de datos tiene MÁS de 250 objetos.';
+    ELSE
+        RAISE NOTICE '>> La base de datos tiene MENOS de 250 objetos.';
+    END IF;
 END $$;
 `,
     "7": `
 DO $$
 DECLARE
-    v_total INTEGER;
+    v_total_objetos INTEGER;
 BEGIN
-    SELECT count(*) INTO v_total FROM information_schema.tables;
-    RAISE NOTICE 'El número total de tablas y vistas en la base de datos es: %', v_total;
+    -- Usamos pg_class que cataloga todos los objetos (tablas, índices, secuencias, vistas, etc.)
+    SELECT count(*) INTO v_total_objetos FROM pg_catalog.pg_class;
+    RAISE NOTICE 'El número total de objetos en la base de datos es: %', v_total_objetos;
 END $$;
-    `,
+`,
     "8": `
 DO $$
 BEGIN
