@@ -271,23 +271,24 @@ BEGIN
     END IF;
 END $$;
 `,
-    "6": `
+        "6": `
 DO $$
 DECLARE
     v_total INTEGER;
 BEGIN
-    SELECT count(*) INTO v_total FROM information_schema.tables;
-    RAISE NOTICE 'Total de "tablas y vistas" en la BD: %', v_total;
+    -- Contamos desde pg_class para obtener un número más completo de objetos (tablas, índices, secuencias, etc.)
+    SELECT count(*) INTO v_total FROM pg_catalog.pg_class;
+    RAISE NOTICE 'Número total de objetos en la BD (tablas, índices, secuencias, etc.): %', v_total;
     CASE
-        WHEN v_total < 500 THEN
-            RAISE NOTICE 'LA BASE DE DATOS TIENE MENOS DE 500 TABLAS/VISTAS.';
         WHEN v_total < 1000 THEN
-            RAISE NOTICE 'LA BASE DE DATOS TIENE ENTRE 500 Y 999 TABLAS/VISTAS.';
+            RAISE NOTICE '>> La base de datos tiene una cantidad de objetos estándar.';
+        WHEN v_total < 5000 THEN
+            RAISE NOTICE '>> La base de datos tiene una cantidad considerable de objetos.';
         ELSE
-            RAISE NOTICE 'LA BASE DE DATOS TIENE 1000 TABLAS/VISTAS O MÁS.';
+            RAISE NOTICE '>> La base de datos es grande y contiene muchos objetos.';
     END CASE;
 END $$;
-    `,
+`,
     "7": `
 DO $$
 DECLARE
