@@ -1,10 +1,9 @@
 const path = require('path');
-// Le decimos a dotenv que el archivo .env está en la carpeta padre (la raíz del proyecto)
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const express = require('express');
 const { Pool } = require('pg');
-const session = require('express-session'); // Este paquete es crucial para logins individuales
+const session = require('express-session');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -28,7 +27,6 @@ app.use(session({
 
 // --- Rutas de la Aplicación ---
 
-// RUTA DE LOGIN CORREGIDA Y SEGURA
 app.post('/login', async (req, res) => {
     const { usuario, contraseña } = req.body;
 
@@ -36,7 +34,6 @@ app.post('/login', async (req, res) => {
         return res.status(400).json({ success: false, message: 'Por favor ingrese usuario y contraseña.' });
     }
 
-    // Crea una configuración de conexión específica para el usuario que intenta iniciar sesión
     const userDbConfig = {
         user: usuario,
         password: contraseña,
@@ -53,10 +50,6 @@ app.post('/login', async (req, res) => {
         client = await tempPool.connect();
         await client.query('SELECT 1');
 
-        // ==============================================================================
-        //      AQUÍ ESTABA EL ERROR DE TIPEO CORREGIDO: 'userDbConfig'
-        // Si la consulta anterior tuvo éxito, guardamos la configuración en la sesión.
-        // ==============================================================================
         req.session.dbConfig = userDbConfig;
         
         console.log(`Login exitoso para el usuario: ${usuario}`);
@@ -72,17 +65,13 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// =====================================================================
-//                  AQUÍ ESTÁ LA CORRECCIÓN
-// =====================================================================
-// La ruta de ejecución AHORA SÍ encontrará la sesión
 app.post('/execute', async (req, res) => {
     if (!req.session.dbConfig) {
         return res.status(401).json({ success: false, message: 'Sesión no válida. Por favor, inicie sesión de nuevo.' });
     }
 
     const { codigo, incremento } = req.body;
-    let scriptToRun = postgresScripts[codigo]; // Obtenemos la plantilla del script
+    let scriptToRun = postgresScripts[codigo];
 
     if (!scriptToRun) {
         return res.status(400).json({ success: false, message: 'Código de script no válido.' });
@@ -96,20 +85,16 @@ app.post('/execute', async (req, res) => {
         const notices = [];
         client.on('notice', msg => { notices.push(msg.message); });
 
-        let params = []; // Por defecto, no hay parámetros
+        let params = [];
 
-        // CORRECCIÓN: Manejo especial para el script #9
         if (codigo === '9') {
             const step = parseInt(incremento, 10);
             if (isNaN(step) || step < 1) {
                 throw new Error('El incremento debe ser un número mayor o igual a 1.');
             }
-            // En lugar de enviar un parámetro, reemplazamos el texto en el script.
-            // Esto es seguro porque 'step' ya fue validado como un número.
             scriptToRun = scriptToRun.replace('$1', step);
         }
 
-        // Ejecutamos el script. Para el #9, 'params' estará vacío y el valor ya está en el string.
         await client.query(scriptToRun, params);
         
         const output = notices.join('\n');
@@ -125,13 +110,12 @@ app.post('/execute', async (req, res) => {
     }
 });
 
-// La ruta de Logout ahora destruye la sesión
 app.post('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
             return res.status(500).json({ success: false, message: 'No se pudo cerrar la sesión.' });
         }
-        res.clearCookie('connect.sid'); // Limpia la cookie del navegador
+        res.clearCookie('connect.sid');
         return res.json({ success: true, message: 'Sesión cerrada exitosamente.' });
     });
 });
@@ -142,9 +126,6 @@ app.listen(port, () => {
 });
 
 
-
-// CAMBIO PRINCIPAL: Los scripts ya no son llamadas a funciones.
-// Ahora son bloques de código PL/pgSQL completos y "quemados" en el código.
 const postgresScripts = {
     "1": `
 DO $$
@@ -196,9 +177,9 @@ BEGIN
     RAISE NOTICE '10. Verificación de Años Bisiestos:';
     FOR anio IN 2023..2026 LOOP
         IF to_char( (TO_DATE(anio || '-03-01', 'YYYY-MM-DD') - INTERVAL '1 day'), 'DD') = '29' THEN
-            RAISE NOTICE '    - El año % SÍ es bisiesto.', anio;
+            RAISE NOTICE '     - El año % SÍ es bisiesto.', anio;
         ELSE
-            RAISE NOTICE '    - El año % NO es bisiesto.', anio;
+            RAISE NOTICE '     - El año % NO es bisiesto.', anio;
         END IF;
     END LOOP;
     RAISE NOTICE '--- FIN DEL PROGRAMA ---';
@@ -255,7 +236,6 @@ BEGIN
     
     -- 3. Mostrar el tiempo transcurrido de forma detallada
     RAISE NOTICE 'Tiempo exacto transcurrido desde el inicio:';
-    -- La función age() ya formatea el intervalo de forma legible, pero la mostraremos por partes.
     RAISE NOTICE '% Días, % Horas, % Minutos y % Segundos', 
         EXTRACT(DAY FROM v_elapsed_interval),
         EXTRACT(HOUR FROM v_elapsed_interval),
@@ -271,43 +251,33 @@ BEGIN
     END IF;
 END $$;
 `,
-         "6": `
+    "6": `
 DO $$
 DECLARE
-    v_total_objetos  INTEGER;
-    v_total_tablas   INTEGER;
-    v_total_indices  INTEGER;
+    v_total INTEGER;
 BEGIN
-    -- Conteo total de objetos (incluye tablas, índices, secuencias, vistas, etc.)
-    SELECT count(*) INTO v_total_objetos FROM pg_catalog.pg_class;
-
-    -- Conteo específico de tablas (relkind = 'r' para 'relation')
-    SELECT count(*) INTO v_total_tablas FROM pg_catalog.pg_class WHERE relkind = 'r';
-
-    -- Conteo específico de índices (relkind = 'i' para 'index')
-    SELECT count(*) INTO v_total_indices FROM pg_catalog.pg_class WHERE relkind = 'i';
-
-    RAISE NOTICE '--- ANÁLISIS DE OBJETOS DE LA BASE DE DATOS ---';
-    RAISE NOTICE 'Total de objetos encontrados: %', v_total_objetos;
-    RAISE NOTICE ''; -- Línea en blanco para separar
-    -- Lógica de comparación con 250
-    IF v_total_objetos > 250 THEN
-        RAISE NOTICE '>> La base de datos tiene MÁS de 250 objetos.';
-    ELSE
-        RAISE NOTICE '>> La base de datos tiene MENOS de 250 objetos.';
-    END IF;
+    -- Contamos desde pg_class para obtener un número más completo de objetos (tablas, índices, secuencias, etc.)
+    SELECT count(*) INTO v_total FROM pg_catalog.pg_class;
+    RAISE NOTICE 'Número total de objetos en la BD (tablas, índices, secuencias, etc.): %', v_total;
+    CASE
+        WHEN v_total < 1000 THEN
+            RAISE NOTICE '>> La base de datos tiene una cantidad de objetos estándar.';
+        WHEN v_total < 5000 THEN
+            RAISE NOTICE '>> La base de datos tiene una cantidad considerable de objetos.';
+        ELSE
+            RAISE NOTICE '>> La base de datos es grande y contiene muchos objetos.';
+    END CASE;
 END $$;
 `,
     "7": `
 DO $$
 DECLARE
-    v_total_objetos INTEGER;
+    v_total INTEGER;
 BEGIN
-    -- Usamos pg_class que cataloga todos los objetos (tablas, índices, secuencias, vistas, etc.)
-    SELECT count(*) INTO v_total_objetos FROM pg_catalog.pg_class;
-    RAISE NOTICE 'El número total de objetos en la base de datos es: %', v_total_objetos;
+    SELECT count(*) INTO v_total FROM information_schema.tables;
+    RAISE NOTICE 'El número total de tablas y vistas en la base de datos es: %', v_total;
 END $$;
-`,
+    `,
     "8": `
 DO $$
 BEGIN
@@ -376,6 +346,66 @@ BEGIN
             RAISE NOTICE 'NÚMERO IMPAR: %', v_num;
         END IF;
     END LOOP;
+END $$;
+    `,
+    // AÑADE EL NUEVO SCRIPT AQUÍ
+    "13": `
+DO $$
+DECLARE
+    -- Declaración del tipo TPERSONA (debe existir a nivel de esquema)
+    -- Si no existe, ejecutar: CREATE TYPE TPERSONA AS (CODIGO INT, NOMBRE VARCHAR(100), FECHA_CONTRATACION DATE);
+    
+    V_LISTA_EMPLEADOS TPERSONA[]; -- Array de tipo TPERSONA
+    
+    -- Variables para los cálculos de antigüedad
+    V_ANOS_ANTIGUEDAD      NUMERIC;
+    V_MESES_ANTIGUEDAD     NUMERIC;
+    
+    -- Variables para el bucle de iteración
+    empleado_rec RECORD; -- Un registro genérico para la fila actual del cursor
+    idx INTEGER := 1;    -- Índice para llenar el array
+    jdx INTEGER;         -- Índice para recorrer el array
+
+BEGIN
+    RAISE NOTICE '--- INICIANDO CARGA DE EMPLEADOS DESDE LA TABLA A LA LISTA (TPERSONA[]) ---';
+
+    -- Llenar el array (V_LISTA_EMPLEADOS) con los datos de la tabla 'employees'
+    FOR empleado_rec IN SELECT employee_id, first_name, last_name, hire_date FROM employees
+    LOOP
+        V_LISTA_EMPLEADOS[idx] := (
+            empleado_rec.employee_id,
+            empleado_rec.first_name || ' ' || empleado_rec.last_name,
+            empleado_rec.hire_date
+        )::TPERSONA;
+        
+        RAISE NOTICE 'Cargado en la LISTA [Índice %]: CODIGO: %, NOMBRE: %', idx, V_LISTA_EMPLEADOS[idx].CODIGO, V_LISTA_EMPLEADOS[idx].NOMBRE;
+        
+        idx := idx + 1;
+    END LOOP;
+
+    RAISE NOTICE '--- CARGA COMPLETA. PROCEDIENDO A MOSTRAR DATOS DESDE LA LISTA ---';
+    RAISE NOTICE 'Número total de empleados en la lista: %', COALESCE(array_length(V_LISTA_EMPLEADOS, 1), 0);
+
+    IF array_length(V_LISTA_EMPLEADOS, 1) IS NOT NULL AND array_length(V_LISTA_EMPLEADOS, 1) > 0 THEN
+        FOR jdx IN array_lower(V_LISTA_EMPLEADOS, 1) .. array_upper(V_LISTA_EMPLEADOS, 1)
+        LOOP
+            V_ANOS_ANTIGUEDAD   := EXTRACT(YEAR FROM age(CURRENT_DATE, V_LISTA_EMPLEADOS[jdx].FECHA_CONTRATACION));
+            V_MESES_ANTIGUEDAD  := EXTRACT(MONTH FROM age(CURRENT_DATE, V_LISTA_EMPLEADOS[jdx].FECHA_CONTRATACION));
+
+            RAISE NOTICE 'DE LA LISTA [Índice %]: CODIGO: %, NOMBRE: %, FECHA_CONTRATACION: %, ANTIGUEDAD: % años y % meses.',
+                jdx,
+                V_LISTA_EMPLEADOS[jdx].CODIGO,
+                V_LISTA_EMPLEADOS[jdx].NOMBRE,
+                TO_CHAR(V_LISTA_EMPLEADOS[jdx].FECHA_CONTRATACION, 'DD-MM-YYYY'),
+                V_ANOS_ANTIGUEDAD,
+                V_MESES_ANTIGUEDAD;
+        END LOOP;
+    ELSE
+        RAISE NOTICE 'La lista de empleados está vacía. No hay datos para mostrar.';
+    END IF;
+
+    RAISE NOTICE '--- PROCESO COMPLETADO ---';
+
 END $$;
     `
 };
