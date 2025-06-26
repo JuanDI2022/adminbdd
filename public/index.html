@@ -1,321 +1,419 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login y Ejecución PL/SQL | Moderno</title>
+ <!DOCTYPE html> 
+ <html lang="es"> 
+ <head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Login y Ejecución PL/SQL | Moderno</title> 
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com"> 
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> 
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"> 
+    <script src="https://unpkg.com/feather-icons"></script> 
 
-    <style>
-        :root {
-            --color-primario: #007bff;
-            --color-primario-hover: #0056b3;
-            --color-fondo: #f4f7f6;
-            --color-tarjeta: #ffffff;
-            --color-texto: #333333;
-            --color-texto-secundario: #555555;
-            --color-borde: #dddddd;
-            --color-sombra: rgba(0, 0, 0, 0.1);
-            --color-exito: #28a745;
-            --color-error: #dc3545;
-            --radio-borde: 8px;
-        }
+    <style> 
+        :root { 
+            --color-primario: #4A90E2; /* Un azul más vibrante */ 
+            --color-primario-hover: #357ABD; 
+            --color-fondo: #f0f2f5; /* Fondo más suave */ 
+            --color-tarjeta: #ffffff; 
+            --color-texto: #2c3e50; /* Texto oscuro para mayor contraste */ 
+            --color-texto-secundario: #7f8c8d; 
+            --color-borde: #e0e6ed; 
+            --color-sombra: rgba(0, 0, 0, 0.08); /* Sombra más sutil */ 
+            --radio-borde: 12px; /* Bordes más redondeados */ 
+            --color-exito: #2ecc71; 
+            --color-error: #e74c3c; 
+            --color-codigo-bg: #282c34; /* Fondo oscuro para el código */ 
+            --color-codigo-text: #abb2bf; /* Texto claro para el código */ 
+        } 
 
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
-            color: var(--color-texto);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); /* Gradiente más suave */ 
+            color: var(--color-texto); 
+            margin: 20px; /* Reducir márgenes para más espacio */ 
+            padding: 20px; 
+            display: flex; 
+            justify-content: flex-start; /* Alinea al inicio, permitiendo expansión */ 
+            align-items: flex-start; 
+            min-height: 100vh; 
+            box-sizing: border-box; 
+        } 
 
-        .container {
-            max-width: 500px;
-            width: 100%;
-        }
+        .container { 
+            width: 95%; /* Ocupa la mayoría del ancho */ 
+            display: flex; 
+            flex-direction: column; 
+            gap: 30px; 
+        } 
 
-        .card {
-            background-color: var(--color-tarjeta);
-            border-radius: var(--radio-borde);
-            padding: 40px;
-            box-shadow: 0 10px 25px var(--color-sombra);
-            transition: transform 0.3s ease;
-            position: relative;
-        }
+        .card { 
+            background-color: var(--color-tarjeta); 
+            border-radius: var(--radio-borde); 
+            padding: 30px; /* Reducir un poco el padding interno */ 
+            box-shadow: 0 12px 30px var(--color-sombra); 
+            transition: transform 0.3s ease, box-shadow 0.3s ease; 
+            position: relative; 
+        } 
 
-        .card:hover {
-            transform: translateY(-5px);
-        }
+        .card:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 18px 40px var(--color-sombra); 
+        } 
 
-        h1, h2 {
-            text-align: center;
-            color: var(--color-texto);
-            margin-bottom: 30px;
-        }
-        
-        h3 {
-            margin-top: 30px;
-            border-bottom: 1px solid var(--color-borde);
-            padding-bottom: 10px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--color-texto-secundario);
-        }
+        h1, h2 { 
+            text-align: center; 
+            color: var(--color-texto); 
+            margin-bottom: 30px; 
+            font-weight: 700; 
+        } 
 
-        input[type="text"],
-        input[type="password"],
-        input[type="number"],
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--color-borde);
-            border-radius: var(--radio-borde);
-            background-color: var(--color-fondo);
-            font-family: 'Poppins', sans-serif;
-            font-size: 16px;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            box-sizing: border-box;
-        }
+        h3 { 
+            margin-top: 35px; 
+            border-bottom: 1px solid var(--color-borde); 
+            padding-bottom: 12px; 
+            color: var(--color-texto); 
+            font-weight: 600; 
+        } 
 
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--color-primario);
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-        }
-        
-        button {
-            width: 100%;
-            padding: 15px;
-            background-color: var(--color-primario);
-            color: white;
-            border: none;
-            border-radius: var(--radio-borde);
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        button:hover {
-            background-color: var(--color-primario-hover);
-            transform: translateY(-2px);
-        }
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600; 
+            color: var(--color-texto); 
+            font-size: 1.05em; 
+        } 
 
-        .btn-logout {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background-color: transparent;
-            border: 1px solid var(--color-borde);
-            color: var(--color-texto-secundario);
-            height: 40px;
-            width: 40px;
-            padding: 0;
-            margin: 0;
-            border-radius: 50%;
-        }
-        .btn-logout:hover {
-            background-color: var(--color-fondo);
-            border-color: var(--color-error);
-            color: var(--color-error);
-            transform: translateY(0) scale(1.1);
-        }
+        input, select { 
+            width: 100%; 
+            padding: 12px 16px; 
+            border: 1px solid var(--color-borde); 
+            border-radius: var(--radio-borde); 
+            background-color: var(--color-fondo); 
+            font-family: 'Poppins', sans-serif; 
+            font-size: 16px; 
+            color: var(--color-texto-secundario); 
+            transition: border-color 0.3s ease, box-shadow 0.3s ease; 
+            box-sizing: border-box; 
+            -webkit-appearance: none; 
+            -moz-appearance: none; 
+            appearance: none; 
+        } 
 
-        #mensajes {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: var(--radio-borde);
-            text-align: center;
-            font-weight: 500;
-            display: none;
-        }
-        #mensajes.success {
-            background-color: #d4edda;
-            color: #155724;
-            display: block;
-        }
-        #mensajes.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            display: block;
-        }
+        input:focus, select:focus { 
+            outline: none; 
+            border-color: var(--color-primario); 
+            box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.3); 
+        } 
+
+        button { 
+            width: 100%; 
+            padding: 14px 18px; 
+            background-color: var(--color-primario); 
+            color: white; 
+            border: none; 
+            border-radius: var(--radio-borde); 
+            font-size: 17px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease; 
+            margin-top: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 10px; 
+        } 
+
+        button:hover { 
+            background-color: var(--color-primario-hover); 
+            transform: translateY(-3px); 
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2); 
+        } 
+        button:active { 
+            transform: translateY(0); 
+            box-shadow: none; 
+        } 
+
+        .btn-logout { 
+            position: absolute; 
+            top: 15px; 
+            right: 15px; 
+            background-color: transparent; 
+            border: 2px solid var(--color-borde); 
+            color: var(--color-texto-secundario); 
+            height: 40px; 
+            width: 40px; 
+            padding: 0; 
+            margin: 0; 
+            border-radius: 50%; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            font-size: 18px; 
+            transition: all 0.3s ease; 
+        } 
+        .btn-logout:hover { 
+            background-color: var(--color-error); 
+            border-color: var(--color-error); 
+            color: white; 
+            transform: translateY(0) scale(1.05); 
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3); 
+        } 
+
+        #mensajes { 
+            padding: 15px; 
+            margin-bottom: 20px; 
+            border-radius: var(--radio-borde); 
+            text-align: center; 
+            font-weight: 600; 
+            display: none; 
+            font-size: 1.1em; 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); 
+        } 
+        #mensajes.success { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+            display: block; 
+        } 
+        #mensajes.error { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+            display: block; 
+        } 
 
         #resultado { 
-            white-space: pre-wrap;
-            background-color: #2d333b;
-            color: #cdd9e5;
-            border: 1px solid #444c56;
-            padding: 15px; 
-            margin-top: 20px;
-            border-radius: var(--radio-borde);
-            font-family: 'Courier New', Courier, monospace;
-            min-height: 50px;
-        }
-    </style>
-</head>
-<body>
+            white-space: pre-wrap; 
+            background-color: var(--color-codigo-bg); 
+            color: var(--color-codigo-text); 
+            border: 1px solid #444c56; 
+            padding: 20px; 
+            margin-top: 20px; 
+            border-radius: var(--radio-borde); 
+            font-family: 'Fira Code', 'Courier New', Courier, monospace; 
+            font-size: 0.95em; 
+            line-height: 1.5; 
+            min-height: 400px; /* Aumenta la altura mínima aún más */ 
+            max-height: 80vh; /* La altura máxima será el 80% de la ventana */ 
+            overflow-y: auto; 
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2); 
+            resize: vertical; 
+        } 
 
-    <div class="container">
-        <div id="loginCard" class="card">
-            <h1>Bienvenido</h1>
-            <div id="mensajes"></div>
-            <form id="loginForm">
-                <label for="usuario">Usuario</label>
-                <input type="text" id="usuario" name="usuario" required autocomplete="username">
-                <br><br>
-                <label for="contraseña">Contraseña</label>
-                <input type="password" id="contraseña" name="contraseña" required autocomplete="current-password">
-                <button type="submit">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    <span>Iniciar sesión</span>
-                </button>
-            </form>
-        </div>
+        @media (max-width: 768px) { 
+            body { 
+                padding: 10px; 
+                margin: 10px; 
+            } 
+            .container { 
+                width: 100%; 
+            } 
+            .card { 
+                padding: 20px; 
+            } 
+            h1, h2 { 
+                font-size: 1.6em; 
+                margin-bottom: 20px; 
+            } 
+            label { 
+                font-size: 0.9em; 
+            } 
+            input, select, button { 
+                padding: 10px; 
+                font-size: 14px; 
+            } 
+            #resultado { 
+                min-height: 300px; 
+                max-height: 70vh; 
+            } 
+            .btn-logout { 
+                top: 10px; 
+                right: 10px; 
+                height: 30px; 
+                width: 30px; 
+                font-size: 14px; 
+            } 
+        } 
+    </style> 
+ </head> 
+ <body> 
 
-        <div id="contenidoAutenticado" class="card" style="display:none;">
-            <button id="logoutButton" class="btn-logout" title="Cerrar Sesión">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-            </button>
+    <div class="container"> 
+        <div id="loginCard" class="card"> 
+            <h1>Bienvenido</h1> 
+            <div id="mensajes"></div> 
+            <form id="loginForm"> 
+                <label for="usuario">Usuario</label> 
+                <input type="text" id="usuario" name="usuario" required autocomplete="username"> 
+                <br><br> 
+                <label for="contraseña">Contraseña</label> 
+                <input type="password" id="contraseña" name="contraseña" required autocomplete="current-password"> 
+                <button type="submit"> 
+                    <i data-feather="log-in"></i> 
+                    <span>Iniciar sesión</span> 
+                </button> 
+            </form> 
+        </div> 
+
+        <div id="contenidoAutenticado" class="card" style="display:none;"> 
+            <button id="logoutButton" class="btn-logout" title="Cerrar Sesión"> 
+                <i data-feather="log-out"></i> 
+            </button> 
             
-            <h2>Ejecución PL/SQL</h2>
-            <form id="plsqlForm">
-                <label for="codigo">Selecciona un script</label>
-                <select name="codigo" id="codigo" required>
-                    <option value="1">Tipos de datos</option>
-                    <option value="2">Cálculos con fechas</option>
-                    <option value="3">Contar empleados y ver usuario</option>
-                    <option value="4">Info de BD y fecha de creación</option>
-                    <optgroup label="Scripts de Administración y Datos">
-                        <option value="5">Verificar Antigüedad de la BD (>30 días)</option>
-                        <option value="6">Clasificar # de Objetos</option>
-                        <option value="7">Contar Total de Objetos de la BD</option>
-                        <option value="10">Crear Tabla TBL_NUM (Solo 1 vez)</option>
-                        <option value="9">Insertar Lote en TBL_NUM (Con Incremento)</option>
-                    </optgroup>
-                    <optgroup label="Scripts de Lógica y Bucles">
-                        <option value="8">Bucle Simple (Loop de 1 a 10)</option>
-                        <option value="11">Generar Números Pares (1 a 10)</option>
-                        <option value="12">Generar Números Impares (1 a 10)</option>
-                        <option value="13">Reporte de Empleados (Antigüedad)</option>
-                    </optgroup>
-                </select>
+            <h2>Ejecución de Scripts de Base de Datos</h2> 
+            <form id="plsqlForm"> 
+                <label for="codigo">Selecciona un script a ejecutar:</label> 
+                <select name="codigo" id="codigo" required> 
+                    <option value="">-- Selecciona una opción --</option> 
+                    <option value="1">Tipos de datos</option> 
+                    <option value="2">Cálculos con fechas</option> 
+                    <option value="3">Contar empleados y ver usuario</option> 
+                    <option value="4">Info de BD y fecha de creación</option> 
+                    <optgroup label="Scripts de Administración y Datos"> 
+                        <option value="5">Verificar Antigüedad de la BD (>30 días)</option> 
+                        <option value="6">Clasificar # de Objetos</option> 
+                        <option value="7">Contar Total de Objetos de la BD</option> 
+                        <option value="10">Crear Tabla TBL_NUM (Solo 1 vez)</option> 
+                        <option value="9">Insertar Lote en TBL_NUM (Con Incremento)</option> 
+                        <!-- ===================== NUEVA OPCIÓN AÑADIDA AQUÍ ===================== -->
+                        <option value="14">Validar Cédula Ecuatoriana</option> 
+                    </optgroup> 
+                    <optgroup label="Scripts de Lógica y Bucles"> 
+                        <option value="8">Bucle Simple (Loop de 1 a 10)</option> 
+                        <option value="11">Generar Números Pares (1 a 10)</option> 
+                        <option value="12">Generar Números Impares (1 a 10)</option> 
+                        <option value="13">Reporte de Empleados (Antigüedad)</option> 
+                    </optgroup> 
+                </select> 
 
-                <div id="parametrosAdicionales" style="display:none; margin-top: 15px;">
-                    <label for="incremento">Incremento (de 1 en 1, 2 en 2, etc.)</label>
-                    <input type="number" id="incremento" name="incremento" value="1" min="1">
+                <!-- ========= NUEVO DIV PARA EL INPUT DE LA CÉDULA ========= -->
+                <div id="parametrosCedula" style="display:none; margin-top: 15px;"> 
+                    <label for="cedula">Cédula a Validar (10 dígitos)</label> 
+                    <input type="text" id="cedula" name="cedula" maxlength="10"> 
                 </div>
+
+                <div id="parametrosAdicionales" style="display:none; margin-top: 15px;"> 
+                    <label for="incremento">Incremento para inserción (Ej: 1, 2, 5...)</label> 
+                    <input type="number" id="incremento" name="incremento" value="1" min="1"> 
+                </div> 
                 
-                <button type="submit">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                    <span>Ejecutar código</span>
-                </button>
-            </form>
+                <button type="submit"> 
+                    <i data-feather="play"></i> 
+                    <span>Ejecutar código</span> 
+                </button> 
+            </form> 
 
-            <h3>Resultado de la Ejecución</h3>
-            <div id="resultado"></div>
-        </div>
-    </div>
+            <h3><i data-feather="terminal" style="vertical-align: middle; margin-right: 8px;"></i> Resultado de la Ejecución</h3> 
+            <div id="resultado"></div> 
+        </div> 
+    </div> 
 
-    <script>
-        const loginForm = document.getElementById('loginForm');
-        const plsqlForm = document.getElementById('plsqlForm');
-        const loginCard = document.getElementById('loginCard');
-        const contenidoAutenticado = document.getElementById('contenidoAutenticado');
-        const resultadoDiv = document.getElementById('resultado');
-        const mensajesDiv = document.getElementById('mensajes');
-        const logoutButton = document.getElementById('logoutButton');
-        const codigoSelect = document.getElementById('codigo');
-        const parametrosDiv = document.getElementById('parametrosAdicionales');
+    <script> 
+        const loginForm = document.getElementById('loginForm'); 
+        const plsqlForm = document.getElementById('plsqlForm'); 
+        const loginCard = document.getElementById('loginCard'); 
+        const contenidoAutenticado = document.getElementById('contenidoAutenticado'); 
+        const resultadoDiv = document.getElementById('resultado'); 
+        const mensajesDiv = document.getElementById('mensajes'); 
+        const logoutButton = document.getElementById('logoutButton'); 
+        const codigoSelect = document.getElementById('codigo'); 
+        const parametrosDiv = document.getElementById('parametrosAdicionales'); 
+        // ===================== NUEVA CONSTANTE PARA EL DIV DE LA CÉDULA =====================
+        const parametrosCedulaDiv = document.getElementById('parametrosCedula'); 
 
-        codigoSelect.addEventListener('change', () => {
-            if (codigoSelect.value === '9') {
-                parametrosDiv.style.display = 'block';
-            } else {
-                parametrosDiv.style.display = 'none';
+        // Inicializar Feather Icons 
+        feather.replace(); 
+
+        // ===================== LÓGICA ACTUALIZADA PARA MOSTRAR INPUTS =====================
+        codigoSelect.addEventListener('change', () => { 
+            // Ocultar todos los divs de parámetros primero
+            parametrosDiv.style.display = 'none';
+            parametrosCedulaDiv.style.display = 'none';
+
+            // Mostrar el div correspondiente a la selección
+            if (codigoSelect.value === '9') { 
+                parametrosDiv.style.display = 'block'; 
+            } else if (codigoSelect.value === '14') {
+                parametrosCedulaDiv.style.display = 'block';
             }
-        });
+        }); 
 
-        logoutButton.addEventListener('click', async () => {
-            const response = await fetch('/logout', { method: 'POST' });
-            const result = await response.json();
+        logoutButton.addEventListener('click', async () => { 
+            const response = await fetch('/logout', { method: 'POST' }); 
+            const result = await response.json(); 
 
-            if (result.success) {
-                contenidoAutenticado.style.display = 'none';
-                loginCard.style.display = 'block';
-                loginForm.reset();
-                resultadoDiv.textContent = '';
-                parametrosDiv.style.display = 'none';
-                mostrarMensaje('Sesión cerrada.', false);
-            }
-        });
+            if (result.success) { 
+                contenidoAutenticado.style.display = 'none'; 
+                loginCard.style.display = 'block'; 
+                loginForm.reset(); 
+                resultadoDiv.textContent = ''; 
+                // ===================== OCULTAR TODOS LOS PARÁMETROS AL SALIR =====================
+                parametrosDiv.style.display = 'none'; 
+                parametrosCedulaDiv.style.display = 'none';
+                mostrarMensaje('Sesión cerrada.', false); 
+                // Reiniciar selección de script 
+                codigoSelect.value = '';  
+            } 
+        }); 
 
-        function mostrarMensaje(mensaje, esError = false) {
-            mensajesDiv.textContent = mensaje;
-            mensajesDiv.className = esError ? 'error' : 'success';
-        }
+        function mostrarMensaje(mensaje, esError = false) { 
+            mensajesDiv.textContent = mensaje; 
+            mensajesDiv.className = esError ? 'error' : 'success'; 
+            mensajesDiv.style.display = 'block'; // Asegura que se muestre 
+        } 
 
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(loginForm);
-            const data = Object.fromEntries(formData.entries());
+        loginForm.addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const formData = new FormData(loginForm); 
+            const data = Object.fromEntries(formData.entries()); 
 
-            try {
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const result = await response.json();
-                if (result.success) {
-                    loginCard.style.display = 'none';
-                    contenidoAutenticado.style.display = 'block';
-                    mensajesDiv.style.display = 'none';
-                } else {
-                    mostrarMensaje(result.message, true);
-                }
-            } catch (error) {
-                mostrarMensaje('Error de red al intentar iniciar sesión.', true);
-            }
-        });
+            try { 
+                const response = await fetch('/login', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(data) 
+                }); 
+                const result = await response.json(); 
+                if (result.success) { 
+                    loginCard.style.display = 'none'; 
+                    contenidoAutenticado.style.display = 'block'; 
+                    mensajesDiv.style.display = 'none'; // Oculta mensajes después de login exitoso 
+                    resultadoDiv.textContent = ''; // Limpiar resultados anteriores 
+                    // Reiniciar selección de script 
+                    codigoSelect.value = '';  
+                } else { 
+                    mostrarMensaje(result.message, true); 
+                } 
+            } catch (error) { 
+                mostrarMensaje('Error de red al intentar iniciar sesión.', true); 
+            } 
+        }); 
 
-        plsqlForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(plsqlForm);
-            const data = Object.fromEntries(formData.entries());
-            resultadoDiv.textContent = 'Ejecutando...';
+        plsqlForm.addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const formData = new FormData(plsqlForm); 
+            const data = Object.fromEntries(formData.entries()); 
+            resultadoDiv.textContent = 'Ejecutando...'; // Mensaje de "cargando" 
 
-            try {
-                const response = await fetch('/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const result = await response.json();
-                if (result.success) {
-                    resultadoDiv.textContent = result.result;
-                } else {
-                    resultadoDiv.textContent = `Error: ${result.message}`;
-                }
-            } catch (error) {
-                resultadoDiv.textContent = `Error de red al ejecutar el código.`;
-            }
-        });
-    </script>
-</body>
-</html>
+            try { 
+                const response = await fetch('/execute', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(data) 
+                }); 
+                const result = await response.json(); 
+                if (result.success) { 
+                    resultadoDiv.textContent = result.result; 
+                } else { 
+                    resultadoDiv.textContent = `Error: ${result.message}`; 
+                    mostrarMensaje(`Error al ejecutar: ${result.message}`, true); 
+                } 
+            } catch (error) { 
+                resultadoDiv.textContent = `Error de red al ejecutar el código.`; 
+                mostrarMensaje(`Error de red al ejecutar el código.`, true); 
+            } 
+        }); 
+    </script> 
+ </body> 
+ </html>
