@@ -11,7 +11,9 @@ const port = process.env.PORT || 3000;
 // --- Middleware ---
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+// Sirve los archivos estáticos desde la carpeta 'public' que está un nivel arriba del directorio actual (__dirname)
 app.use(express.static(path.join(__dirname, '../public')));
+
 
 app.use(session({
     secret: 'una_frase_muy_secreta_y_larga_para_proteger_las_sesiones',
@@ -26,6 +28,11 @@ app.use(session({
 
 
 // --- Rutas de la Aplicación ---
+
+// Ruta para servir el archivo HTML principal
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
+});
 
 app.post('/login', async (req, res) => {
     const { usuario, contraseña } = req.body;
@@ -70,7 +77,7 @@ app.post('/execute', async (req, res) => {
         return res.status(401).json({ success: false, message: 'Sesión no válida. Por favor, inicie sesión de nuevo.' });
     }
 
-    const { codigo, incremento } = req.body;
+    const { codigo, incremento, cedula } = req.body;
     let scriptToRun = postgresScripts[codigo];
 
     if (!scriptToRun) {
@@ -85,17 +92,25 @@ app.post('/execute', async (req, res) => {
         const notices = [];
         client.on('notice', msg => { notices.push(msg.message); });
 
-        let params = [];
-
+        // --- INICIO DE LA CORRECCIÓN: Volver a reemplazo de texto para DO blocks ---
         if (codigo === '9') {
             const step = parseInt(incremento, 10);
             if (isNaN(step) || step < 1) {
                 throw new Error('El incremento debe ser un número mayor o igual a 1.');
             }
+            // Reemplaza el placeholder en el texto del script
             scriptToRun = scriptToRun.replace('$1', step);
+        } else if (codigo === '14') {
+            if (!cedula || !/^\d{10}$/.test(cedula)) {
+                 throw new Error('La cédula debe contener exactamente 10 dígitos numéricos.');
+            }
+             // Reemplaza el placeholder en el texto del script
+            scriptToRun = scriptToRun.replace('$1', cedula);
         }
 
-        await client.query(scriptToRun, params);
+        // Ejecutar la consulta con el texto final. No se pasa un array de parámetros.
+        await client.query(scriptToRun);
+        // --- FIN DE LA CORRECCIÓN ---
         
         const output = notices.join('\n');
         res.json({ success: true, result: output || 'Ejecución completada sin mensajes de salida.' });
@@ -293,8 +308,8 @@ DO $$
 DECLARE
     v_num_inicial    INTEGER;
     v_numero_actual INTEGER;
-    v_contador      INTEGER := 0;
-    p_incremento    INTEGER := $1; -- El parámetro se recibe aquí
+    v_contador       INTEGER := 0;
+    p_incremento     INTEGER := $1; -- Placeholder para reemplazo de texto
 BEGIN
     SELECT COALESCE(MAX(num), 0) + 1 INTO v_num_inicial FROM tbl_num;
     v_numero_actual := v_num_inicial;
@@ -348,7 +363,6 @@ BEGIN
     END LOOP;
 END $$;
     `,
-    // AÑADE EL NUEVO SCRIPT AQUÍ
     "13": `
 DO $$
 DECLARE
@@ -389,8 +403,8 @@ BEGIN
     IF array_length(V_LISTA_EMPLEADOS, 1) IS NOT NULL AND array_length(V_LISTA_EMPLEADOS, 1) > 0 THEN
         FOR jdx IN array_lower(V_LISTA_EMPLEADOS, 1) .. array_upper(V_LISTA_EMPLEADOS, 1)
         LOOP
-            V_ANOS_ANTIGUEDAD   := EXTRACT(YEAR FROM age(CURRENT_DATE, V_LISTA_EMPLEADOS[jdx].FECHA_CONTRATACION));
-            V_MESES_ANTIGUEDAD  := EXTRACT(MONTH FROM age(CURRENT_DATE, V_LISTA_EMPLEADOS[jdx].FECHA_CONTRATACION));
+            V_ANOS_ANTIGUEDAD  := EXTRACT(YEAR FROM age(CURRENT_DATE, V_LISTA_EMPLEADOS[jdx].FECHA_CONTRATACION));
+            V_MESES_ANTIGUEDAD := EXTRACT(MONTH FROM age(CURRENT_DATE, V_LISTA_EMPLEADOS[jdx].FECHA_CONTRATACION));
 
             RAISE NOTICE 'DE LA LISTA [Índice %]: CODIGO: %, NOMBRE: %, FECHA_CONTRATACION: %, ANTIGUEDAD: % años y % meses.',
                 jdx,
@@ -406,6 +420,73 @@ BEGIN
 
     RAISE NOTICE '--- PROCESO COMPLETADO ---';
 
+EXCEPTION
+    WHEN undefined_table THEN
+        RAISE NOTICE 'Error: La tabla "employees" no fue encontrada.';
+    WHEN invalid_text_representation THEN
+         RAISE NOTICE 'Error: El tipo TPERSONA no existe. Ejecute: CREATE TYPE TPERSONA AS (CODIGO INT, NOMBRE VARCHAR(100), FECHA_CONTRATACION DATE);';
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Ha ocurrido un error inesperado: %', SQLERRM;
 END $$;
+    `,
+    "14": `
+DO $$
+DECLARE
+    v_cedula_a_validar VARCHAR(10) := '$1'; -- Placeholder para reemplazo de texto
+    rec RECORD;
+    v_suma_total         INTEGER := 0;
+    v_digito_actual      INTEGER;
+    v_producto           INTEGER;
+    v_digito_verificador_calculado INTEGER;
+    v_digito_verificador_real      INTEGER;
+BEGIN
+    FOR rec IN SELECT v_cedula_a_validar AS cedula LOOP
+        RAISE NOTICE '--- Verificando Cédula: % ---', rec.cedula;
+        IF LENGTH(rec.cedula) != 10 OR NOT (rec.cedula ~ '^[0-9]+$') THEN
+            RAISE EXCEPTION 'Error: La cédula debe tener 10 dígitos numéricos.';
+        END IF;
+        RAISE NOTICE '--- Proceso del Algoritmo Módulo 10 ---';
+        FOR i IN 1..9 LOOP
+            v_digito_actual := CAST(SUBSTRING(rec.cedula, i, 1) AS INTEGER);
+            IF (i % 2) != 0 THEN
+                v_producto := v_digito_actual * 2;
+                IF v_producto >= 10 THEN
+                    v_producto := v_producto - 9;
+                END IF;
+                RAISE NOTICE 'Posición % (impar): % * 2 = %', i, v_digito_actual, v_producto;
+            ELSE
+                v_producto := v_digito_actual * 1;
+                RAISE NOTICE 'Posición % (par): % * 1 = %', i, v_digito_actual, v_producto;
+            END IF;
+            v_suma_total := v_suma_total + v_producto;
+        END LOOP;
+        RAISE NOTICE '--------------------------------------';
+        RAISE NOTICE 'Suma total de los productos: %', v_suma_total;
+        v_digito_verificador_calculado := 10 - (v_suma_total % 10);
+        IF v_digito_verificador_calculado = 10 THEN
+            v_digito_verificador_calculado := 0;
+        END IF;
+        RAISE NOTICE 'Dígito verificador calculado: %', v_digito_verificador_calculado;
+        v_digito_verificador_real := CAST(SUBSTRING(rec.cedula, 10, 1) AS INTEGER);
+        RAISE NOTICE 'Último dígito de la cédula (real): %', v_digito_verificador_real;
+        IF v_digito_verificador_calculado = v_digito_verificador_real THEN
+            RAISE NOTICE '=> Cédula VÁLIDA. Procediendo a insertar en la base de datos.';
+            INSERT INTO Tcedulas (nro_cedula) VALUES (rec.cedula);
+            RAISE NOTICE 'Cédula % almacenada correctamente.', rec.cedula;
+        ELSE
+            RAISE EXCEPTION 'CEDULA_INVALIDA';
+        END IF;
+    END LOOP;
+EXCEPTION
+    WHEN undefined_table THEN
+        RAISE NOTICE 'Error: La tabla "Tcedulas" no fue encontrada. Por favor, asegúrese de haberla creado.';
+    WHEN OTHERS THEN
+        IF SQLERRM = 'CEDULA_INVALIDA' THEN
+            RAISE NOTICE '=> Cédula INVÁLIDA. El dígito verificador no coincide. No se almacenará en la base de datos.';
+        ELSE
+            RAISE NOTICE 'Ha ocurrido un error inesperado: %', SQLERRM;
+        END IF;
+END;
+$$
     `
 };
