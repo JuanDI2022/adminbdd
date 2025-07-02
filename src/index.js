@@ -4,9 +4,13 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const express = require('express');
 const { Pool } = require('pg');
 const session = require('express-session');
+const fs = require('fs'); // <--- AÑADE ESTA LÍNEA
+const multer = require('multer'); // <--- AÑADE ESTA LÍNEA
+
 
 const app = express();
 const port = process.env.PORT || 3000;
+const upload = multer({ dest: 'uploads/' });
 
 // --- Middleware ---
 app.use(express.urlencoded({ extended: true }));
@@ -135,9 +139,140 @@ app.post('/logout', (req, res) => {
     });
 });
 
+// --- INICIO: CÓDIGO NUEVO PARA AÑADIR (RUTAS PARA REPORTES) ---
 
+// Ruta para obtener las tablas del usuario conectado en PostgreSQL
+app.post('/get-tables', async (req, res) => {
+    if (!req.session.dbConfig) return res.status(401).json({ success: false, message: 'No autenticado' });
+    
+    let client;
+    try {
+        const userPool = new Pool(req.session.dbConfig);
+        client = await userPool.connect();
+        // Consulta SQL para obtener tablas del esquema actual del usuario
+        const result = await client.query(`
+            SELECT tablename 
+            FROM pg_catalog.pg_tables 
+            WHERE schemaname = current_schema()
+            ORDER BY tablename
+        `);
+        // El resultado es un array de objetos, lo convertimos a un array de arrays
+        const tables = result.rows.map(row => [row.tablename]);
+        res.json({ success: true, tables: tables });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    } finally {
+        if (client) client.release();
+    }
+});
+
+// Ruta para obtener las columnas de una tabla seleccionada
+app.post('/get-columns', async (req, res) => {
+    if (!req.session.dbConfig) return res.status(401).json({ success: false, message: 'No autenticado' });
+    const { tableName } = req.body;
+    
+    let client;
+    try {
+        const userPool = new Pool(req.session.dbConfig);
+        client = await userPool.connect();
+        // Usamos una consulta parametrizada para seguridad
+        const result = await client.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = $1 AND table_schema = current_schema()
+            ORDER BY ordinal_position
+        `, [tableName]);
+        
+        const columns = result.rows.map(row => [row.column_name]);
+        res.json({ success: true, columns: columns });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    } finally {
+        if (client) client.release();
+    }
+});
+
+
+// Ruta para GENERAR el reporte y enviarlo para DESCARGA
+app.post('/generate-report', async (req, res) => {
+    if (!req.session.dbConfig) return res.status(401).json({ success: false, message: 'No autenticado' });
+    
+    const { tableName, columns, delimiter, fileName } = req.body;
+    if (!tableName || !columns || columns.length === 0 || !delimiter || !fileName) {
+        return res.status(400).json({ success: false, message: 'Faltan parámetros.' });
+    }
+
+    let client;
+    try {
+        const userPool = new Pool(req.session.dbConfig);
+        client = await userPool.connect();
+
+        // Sanear nombres de columnas para evitar inyección SQL
+        const safeColumns = columns.map(col => `"${col}"`).join(', ');
+        const safeTableName = `"${tableName}"`;
+
+        const query = `SELECT ${safeColumns} FROM ${safeTableName}`;
+        
+        const result = await client.query(query);
+
+        // 1. Crear la cabecera del archivo
+        const header = columns.join(delimiter);
+
+        // 2. Formatear las filas de datos
+        const rows = result.rows.map(row => {
+            // Mapeamos los valores de cada fila en el orden de las columnas solicitadas
+            return columns.map(col => row[col]).join(delimiter);
+        });
+
+        // 3. Unir todo para formar el contenido del archivo
+        const fileContent = [header, ...rows].join('\n');
+
+        // 4. Enviar el contenido como un archivo para descargar
+        res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+        res.setHeader('Content-Type', 'text/plain');
+        res.send(fileContent);
+
+    } catch (err) {
+        console.error("Error en /generate-report:", err);
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, message: `Error al generar reporte: ${err.message}` });
+        }
+    } finally {
+        if (client) client.release();
+    }
+});
+
+
+// Ruta para SUBIR un archivo, leerlo y devolver su contenido
+app.post('/upload-and-read', upload.single('fileToRead'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No se subió ningún archivo.' });
+    }
+
+    const filePath = req.file.path;
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        // Borramos el archivo temporal después de leerlo
+        fs.unlink(filePath, (unlinkErr) => {
+            if (unlinkErr) console.error("Error al borrar el archivo temporal:", unlinkErr);
+        });
+
+        if (err) {
+            return res.status(500).json({ success: false, message: 'Error interno al procesar el archivo.' });
+        }
+        
+        res.json({ success: true, result: data });
+    });
+});
+
+// --- FIN: CÓDIGO NUEVO PARA AÑADIR ---
 app.listen(port, () => {
     console.log(`Servidor Node.js para PostgreSQL ejecutándose en el puerto ${port}`);
+    // Crea la carpeta 'uploads' en la raíz del proyecto si no existe
+    const uploadsDir = path.join(__dirname, '..', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir);
+    }
 });
 
 
